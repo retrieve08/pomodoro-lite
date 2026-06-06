@@ -13,7 +13,7 @@
           <span class="compact-phase" id="compactPhase">待开始</span>
           <strong class="compact-time" id="compactTime">25:00</strong>
         </div>
-        <button class="icon-button" id="expandButton" type="button" title="展开">▣</button>
+        <button class="soft-button" id="expandButton" type="button">展开</button>
       </section>
 
       <section class="panel" id="fullPanel">
@@ -23,18 +23,15 @@
             <h1 id="phaseTitle">待开始</h1>
           </div>
           <div class="window-actions">
-            <button class="icon-button" id="pinButton" type="button" title="置顶">⌃</button>
-            <button class="icon-button" id="compactButton" type="button" title="折叠">▬</button>
-            <button class="icon-button close" id="closeButton" type="button" title="关闭">×</button>
+            <button class="soft-button" id="pinButton" type="button">置顶</button>
+            <button class="soft-button" id="compactButton" type="button">折叠</button>
+            <button class="soft-button" id="closeButton" type="button">关闭</button>
           </div>
         </header>
 
         <section class="timer-block" aria-live="polite">
           <div class="time" id="timeDisplay">25:00</div>
           <div class="progress-text" id="progressText">设置好后开始</div>
-          <div class="meter" aria-hidden="true">
-            <div class="meter-fill" id="meterFill"></div>
-          </div>
         </section>
 
         <form class="settings" id="settingsForm">

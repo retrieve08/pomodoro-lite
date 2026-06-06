@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Globalization;
@@ -42,7 +41,6 @@ namespace PomodoroLite
         private readonly Button stopButton = new RoundedButton();
         private readonly Button topButton = new RoundedButton();
         private readonly Button compactButton = new RoundedButton();
-        private readonly Button fullButton = new RoundedButton();
         private readonly Button weekButton = new RoundedButton();
         private readonly Panel normalPanel = new Panel();
         private readonly Panel compactPanel = new Panel();
@@ -96,14 +94,14 @@ namespace PomodoroLite
             normalPanel.BackColor = Color.FromArgb(255, 250, 242);
 
             Label appLabel = MakeLabel("个人番茄钟", 12, Color.FromArgb(107, 114, 128));
-            appLabel.SetBounds(16, 16, 128, 22);
+            appLabel.SetBounds(16, 16, 180, 22);
 
             phaseLabel.Font = new Font(Font.FontFamily, 20, FontStyle.Bold);
             phaseLabel.ForeColor = Color.FromArgb(34, 40, 49);
-            phaseLabel.SetBounds(16, 42, 128, 34);
+            phaseLabel.SetBounds(16, 42, 150, 34);
 
             topButton.Text = "置顶";
-            topButton.SetBounds(150, 20, 62, 32);
+            topButton.SetBounds(218, 20, 58, 32);
             StyleSoftButton(topButton);
             topButton.Click += delegate
             {
@@ -112,13 +110,8 @@ namespace PomodoroLite
                 topButton.ForeColor = TopMost ? Color.FromArgb(17, 94, 89) : Color.FromArgb(55, 65, 81);
             };
 
-            fullButton.Text = "完整版";
-            fullButton.SetBounds(218, 20, 68, 32);
-            StyleSoftButton(fullButton);
-            fullButton.Click += delegate { OpenFullVersion(); };
-
             compactButton.Text = "折叠";
-            compactButton.SetBounds(292, 20, 52, 32);
+            compactButton.SetBounds(286, 20, 52, 32);
             StyleSoftButton(compactButton);
             compactButton.Click += delegate { SetCompact(true); };
 
@@ -164,7 +157,6 @@ namespace PomodoroLite
             normalPanel.Controls.Add(appLabel);
             normalPanel.Controls.Add(phaseLabel);
             normalPanel.Controls.Add(topButton);
-            normalPanel.Controls.Add(fullButton);
             normalPanel.Controls.Add(compactButton);
             normalPanel.Controls.Add(timeLabel);
             normalPanel.Controls.Add(progressLabel);
@@ -384,25 +376,6 @@ namespace PomodoroLite
             {
                 form.ShowDialog(this);
             }
-        }
-
-        private void OpenFullVersion()
-        {
-            string liteDir = AppDomain.CurrentDomain.BaseDirectory;
-            List<string> candidates = new List<string>();
-            candidates.Add(Path.Combine(liteDir, "dist", "Pomodoro", "Pomodoro.exe"));
-            candidates.Add(Path.Combine(liteDir, "..", "dist", "Pomodoro", "Pomodoro.exe"));
-            candidates.Add(Path.Combine(liteDir, "..", "..", "dist", "Pomodoro", "Pomodoro.exe"));
-
-            string fullExe = candidates.Select(Path.GetFullPath).FirstOrDefault(File.Exists);
-
-            if (string.IsNullOrEmpty(fullExe))
-            {
-                MessageBox.Show(this, "没有找到完整版：" + Environment.NewLine + Path.GetFullPath(candidates[1]), "完整版不可用", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            Process.Start(fullExe);
         }
 
         private void SetCompact(bool compact)

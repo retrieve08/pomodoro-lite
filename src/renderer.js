@@ -13,7 +13,6 @@ const elements = {
   phaseTitle: document.getElementById("phaseTitle"),
   timeDisplay: document.getElementById("timeDisplay"),
   progressText: document.getElementById("progressText"),
-  meterFill: document.getElementById("meterFill"),
   pomodoroCount: document.getElementById("pomodoroCount"),
   workMinutes: document.getElementById("workMinutes"),
   breakMinutes: document.getElementById("breakMinutes"),
@@ -92,17 +91,6 @@ function updateProgressText() {
   elements.progressText.textContent = `第 ${state.currentPomodoro} / ${state.totalPomodoros} 个番茄 · ${state.phase === "work" ? "工作" : "休息"}${paused}`;
 }
 
-function updateMeter() {
-  if (state.phaseTotalSeconds <= 0) {
-    elements.meterFill.style.width = "0%";
-    return;
-  }
-
-  const elapsed = state.phaseTotalSeconds - state.remainingSeconds;
-  const percent = Math.min(100, Math.max(0, (elapsed / state.phaseTotalSeconds) * 100));
-  elements.meterFill.style.width = `${percent}%`;
-}
-
 function updateUi() {
   const formatted = formatTime(state.remainingSeconds);
   const label = getPhaseLabel();
@@ -118,7 +106,6 @@ function updateUi() {
   elements.settingsForm.classList.toggle("disabled", ["running", "paused"].includes(state.status));
 
   updateProgressText();
-  updateMeter();
 }
 
 async function refreshStats() {
