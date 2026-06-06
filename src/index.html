@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>个人番茄钟</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app" id="app">
+      <section class="compact-bar" id="compactBar" aria-label="折叠番茄钟">
+        <div class="drag-region compact-drag">
+          <span class="compact-phase" id="compactPhase">待开始</span>
+          <strong class="compact-time" id="compactTime">25:00</strong>
+        </div>
+        <button class="icon-button" id="expandButton" type="button" title="展开">▣</button>
+      </section>
+
+      <section class="panel" id="fullPanel">
+        <header class="titlebar">
+          <div class="drag-region title-drag">
+            <p class="eyebrow">个人番茄钟</p>
+            <h1 id="phaseTitle">待开始</h1>
+          </div>
+          <div class="window-actions">
+            <button class="icon-button" id="pinButton" type="button" title="置顶">⌃</button>
+            <button class="icon-button" id="compactButton" type="button" title="折叠">▬</button>
+            <button class="icon-button close" id="closeButton" type="button" title="关闭">×</button>
+          </div>
+        </header>
+
+        <section class="timer-block" aria-live="polite">
+          <div class="time" id="timeDisplay">25:00</div>
+          <div class="progress-text" id="progressText">设置好后开始</div>
+          <div class="meter" aria-hidden="true">
+            <div class="meter-fill" id="meterFill"></div>
+          </div>
+        </section>
+
+        <form class="settings" id="settingsForm">
+          <label>
+            <span>番茄数量</span>
+            <input id="pomodoroCount" type="number" min="1" step="1" value="2" inputmode="numeric" />
+          </label>
+          <label>
+            <span>工作分钟</span>
+            <input id="workMinutes" type="number" min="1" step="1" value="25" inputmode="numeric" />
+          </label>
+          <label>
+            <span>休息分钟</span>
+            <input id="breakMinutes" type="number" min="1" step="1" value="5" inputmode="numeric" />
+          </label>
+        </form>
+
+        <section class="controls">
+          <button class="primary" id="startButton" type="button">开始</button>
+          <button id="pauseButton" type="button" disabled>暂停</button>
+          <button id="stopButton" type="button" disabled>停止</button>
+        </section>
+
+        <p class="error" id="errorMessage" role="alert"></p>
+
+        <section class="stats">
+          <div class="today-stat">
+            <span>今日番茄工作</span>
+            <strong id="todayMinutes">0 分钟</strong>
+          </div>
+          <button class="week-toggle" id="weekDetailsButton" type="button">查看本周每天</button>
+          <div class="week-details" id="weekDetails" hidden>
+            <div class="week-rows" id="weekRows"></div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>

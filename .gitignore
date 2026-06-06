@@ -1,0 +1,10 @@
+node_modules/
+vendor/
+dist/
+
+electron-v*.zip
+
+*.log
+*.tmp
+.DS_Store
+Thumbs.db

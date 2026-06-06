@@ -1,0 +1,8 @@
+* text=auto
+*.cs text
+*.js text
+*.html text
+*.css text
+*.md text
+*.ps1 text
+*.bat text eol=crlf

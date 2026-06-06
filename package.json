@@ -1,0 +1,22 @@
+{
+  "name": "personal-pomodoro",
+  "version": "1.0.0",
+  "description": "A compact personal Electron pomodoro timer.",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer.js",
+    "build:lite": "powershell -ExecutionPolicy Bypass -File scripts\\build-lite.ps1",
+    "package:win": "powershell -ExecutionPolicy Bypass -File scripts\\package-win.ps1"
+  },
+  "keywords": [
+    "pomodoro",
+    "electron",
+    "timer"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "33.4.11"
+  }
+}
