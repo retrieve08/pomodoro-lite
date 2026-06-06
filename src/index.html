@@ -63,10 +63,22 @@
             <strong id="todayMinutes">0 分钟</strong>
           </div>
           <button class="week-toggle" id="weekDetailsButton" type="button">查看本周每天</button>
-          <div class="week-details" id="weekDetails" hidden>
-            <div class="week-rows" id="weekRows"></div>
-          </div>
         </section>
+      </section>
+
+      <section class="week-dialog" id="weekDialog" role="dialog" aria-modal="true" aria-labelledby="weekDialogTitle" hidden>
+        <div class="week-dialog-backdrop" data-week-dialog-close></div>
+        <div class="week-dialog-card" role="document">
+          <header class="week-dialog-header">
+            <div>
+              <h2 id="weekDialogTitle">本周每天番茄工作</h2>
+              <p>按工作时长从高到低排列</p>
+            </div>
+            <button class="soft-button week-dialog-x" id="weekDialogXButton" type="button" aria-label="关闭">×</button>
+          </header>
+          <div class="week-rows" id="weekRows"></div>
+          <button class="primary week-dialog-close" id="weekDialogCloseButton" type="button">完成</button>
+        </div>
       </section>
     </main>
 

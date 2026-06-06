@@ -267,30 +267,84 @@ input:focus {
   border-color: var(--warm-line);
 }
 
-.week-details {
-  grid-column: 1 / -1;
+.week-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  -webkit-app-region: no-drag;
+}
+
+.week-dialog[hidden] {
+  display: none;
+}
+
+.week-dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.32);
+}
+
+.week-dialog-card {
+  position: relative;
+  display: flex;
+  width: min(328px, calc(100vw - 24px));
+  max-height: calc(100vh - 28px);
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(226, 232, 240, 0.98);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.24);
+  overflow: auto;
+}
+
+.week-dialog-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.week-dialog-header h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.week-dialog-header p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.week-dialog-x {
+  width: 32px;
+  min-width: 32px;
+  padding: 0;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.week-rows {
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
   background: #ffffff;
 }
 
-.week-details[hidden] {
-  display: none;
-}
-
-.week-rows {
-  display: flex;
-  flex-direction: column;
-}
-
 .week-row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 42px minmax(80px, 1fr) 76px;
   align-items: center;
-  gap: 8px;
-  min-height: 30px;
-  padding: 6px 10px;
+  gap: 10px;
+  min-height: 34px;
+  padding: 7px 10px;
   border-top: 1px solid var(--line);
 }
 
@@ -298,8 +352,39 @@ input:focus {
   border-top: 0;
 }
 
+.week-day,
 .week-row strong {
   font-size: 14px;
+}
+
+.week-day {
+  font-weight: 700;
+  color: #374151;
+}
+
+.week-row strong {
+  text-align: right;
+  color: var(--muted);
+}
+
+.week-bar {
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #f1f5f9;
+}
+
+.week-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.week-dialog-close {
+  align-self: flex-end;
+  min-width: 88px;
+  padding: 0 18px;
 }
 
 .compact-bar {

@@ -16,13 +16,16 @@ const elements = {
   pomodoroCount: document.getElementById("pomodoroCount"),
   workMinutes: document.getElementById("workMinutes"),
   breakMinutes: document.getElementById("breakMinutes"),
+  settingsForm: document.getElementById("settingsForm"),
   startButton: document.getElementById("startButton"),
   pauseButton: document.getElementById("pauseButton"),
   stopButton: document.getElementById("stopButton"),
   errorMessage: document.getElementById("errorMessage"),
   todayMinutes: document.getElementById("todayMinutes"),
   weekDetailsButton: document.getElementById("weekDetailsButton"),
-  weekDetails: document.getElementById("weekDetails"),
+  weekDialog: document.getElementById("weekDialog"),
+  weekDialogXButton: document.getElementById("weekDialogXButton"),
+  weekDialogCloseButton: document.getElementById("weekDialogCloseButton"),
   weekRows: document.getElementById("weekRows")
 };
 
@@ -124,11 +127,17 @@ function renderStats(stats) {
 
     return stats.weekDays.indexOf(left) - stats.weekDays.indexOf(right);
   });
+  const maxMinutes = Math.max(1, ...sortedDays.map((day) => day.minutes));
 
   sortedDays.forEach((day) => {
     const row = document.createElement("div");
     row.className = "week-row";
-    row.innerHTML = `<span>${day.label}</span><strong>${day.minutes} 分钟</strong>`;
+    const fillWidth = day.minutes === 0 ? 0 : Math.max(8, Math.round((day.minutes / maxMinutes) * 100));
+    row.innerHTML = `
+      <span class="week-day">${day.label}</span>
+      <span class="week-bar" aria-hidden="true"><span class="week-fill" style="width: ${fillWidth}%"></span></span>
+      <strong>${day.minutes} 分钟</strong>
+    `;
     elements.weekRows.appendChild(row);
   });
 }
@@ -261,6 +270,16 @@ async function setCompact(compact) {
   elements.app.classList.toggle("is-compact", compact);
 }
 
+function openWeekDialog() {
+  elements.weekDialog.hidden = false;
+  elements.weekDialogCloseButton.focus();
+}
+
+function closeWeekDialog() {
+  elements.weekDialog.hidden = true;
+  elements.weekDetailsButton.focus();
+}
+
 elements.startButton.addEventListener("click", startSession);
 elements.pauseButton.addEventListener("click", togglePause);
 elements.stopButton.addEventListener("click", stopSession);
@@ -268,10 +287,18 @@ elements.pinButton.addEventListener("click", togglePin);
 elements.compactButton.addEventListener("click", () => setCompact(true));
 elements.expandButton.addEventListener("click", () => setCompact(false));
 elements.closeButton.addEventListener("click", () => api.closeWindow());
-elements.weekDetailsButton.addEventListener("click", () => {
-  const isHidden = elements.weekDetails.hidden;
-  elements.weekDetails.hidden = !isHidden;
-  elements.weekDetailsButton.textContent = isHidden ? "收起本周每天" : "查看本周每天";
+elements.weekDetailsButton.addEventListener("click", openWeekDialog);
+elements.weekDialogXButton.addEventListener("click", closeWeekDialog);
+elements.weekDialogCloseButton.addEventListener("click", closeWeekDialog);
+elements.weekDialog.addEventListener("click", (event) => {
+  if (event.target.matches("[data-week-dialog-close]")) {
+    closeWeekDialog();
+  }
+});
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !elements.weekDialog.hidden) {
+    closeWeekDialog();
+  }
 });
 
 [elements.pomodoroCount, elements.workMinutes, elements.breakMinutes].forEach((input) => {
