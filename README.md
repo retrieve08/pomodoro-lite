@@ -22,6 +22,20 @@
 - 自动记录每天工作时间，并提供每周总结。
 - 轻量、简单，不依赖复杂账号或付费功能。
 
+## 界面预览
+
+### 主界面
+
+![主界面](docs/images/main-window.png)
+
+### 每周总结
+
+![每周总结](docs/images/week-summary.png)
+
+### 提示音设置
+
+![提示音设置](docs/images/audio-settings.png)
+
 ## 运行轻量版
 
 直接双击：
