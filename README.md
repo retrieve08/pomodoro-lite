@@ -22,8 +22,8 @@ dist-lite\PomodoroLite.exe
 也可以使用 Git 克隆：
 
 ```powershell
-git clone https://github.com/retrieve08/pomodoro-Fanqie-Clock.git
-cd pomodoro-Fanqie-Clock
+git clone https://github.com/retrieve08/FanqieClock.git
+cd FanqieClock
 ```
 
 克隆后同样可以直接双击 `dist-lite\PomodoroLite.exe`。轻量原生版不需要安装 Node.js、npm 或 Electron；Windows 10/11 通常可以直接运行。
