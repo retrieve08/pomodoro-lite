@@ -7,6 +7,34 @@
 
 推荐日常使用轻量原生版。它只有一个 exe，体积约 18 KB，不需要 Node.js、npm 或 Electron。
 
+## 下载和使用
+
+如果只是想直接使用，推荐下载仓库后运行轻量原生版：
+
+1. 点击 GitHub 页面右上方的 `Code`。
+2. 选择 `Download ZIP`，下载后解压。
+3. 双击运行：
+
+```text
+dist-lite\PomodoroLite.exe
+```
+
+也可以使用 Git 克隆：
+
+```powershell
+git clone https://github.com/retrieve08/pomodoro-Fanqie-Clock.git
+cd pomodoro-Fanqie-Clock
+```
+
+克隆后同样可以直接双击 `dist-lite\PomodoroLite.exe`。轻量原生版不需要安装 Node.js、npm 或 Electron；Windows 10/11 通常可以直接运行。
+
+如果想从源码运行 Electron 版，需要先安装 Node.js 和 npm，然后执行：
+
+```powershell
+npm install
+npm start
+```
+
 ## 为什么做这个番茄钟？
 
 微软自带时钟足够简单，但番茄钟设置不够灵活：不能方便地自定义固定运行次数、工作时长和休息时长，也缺少每周总结。
