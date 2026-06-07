@@ -49,6 +49,8 @@
           </label>
         </form>
 
+        <button class="audio-settings-button" id="audioSettingsButton" type="button">提示音设置</button>
+
         <section class="controls">
           <button class="primary" id="startButton" type="button">开始</button>
           <button id="pauseButton" type="button" disabled>暂停</button>
@@ -64,6 +66,48 @@
           </div>
           <button class="week-toggle" id="weekDetailsButton" type="button">查看本周每天</button>
         </section>
+        </section>
+
+      <section class="audio-dialog" id="audioDialog" role="dialog" aria-modal="true" aria-labelledby="audioDialogTitle" hidden>
+        <div class="audio-dialog-backdrop" data-audio-dialog-close></div>
+        <div class="audio-dialog-card" role="document">
+          <header class="audio-dialog-header">
+            <div>
+              <h2 id="audioDialogTitle">提示音设置</h2>
+              <p>未设置时使用默认三音提示</p>
+            </div>
+            <button class="soft-button audio-dialog-x" id="audioDialogXButton" type="button" aria-label="关闭">×</button>
+          </header>
+
+          <div class="audio-setting-row" data-phase="work">
+            <div class="audio-setting-info">
+              <strong>工作结束</strong>
+              <span id="workAudioName">默认提示音</span>
+            </div>
+            <div class="audio-setting-actions">
+              <button type="button" data-audio-action="choose" data-phase="work">选择文件</button>
+              <button type="button" data-audio-action="record" data-phase="work">录音</button>
+              <button type="button" data-audio-action="preview" data-phase="work">试听</button>
+              <button type="button" data-audio-action="clear" data-phase="work">清除</button>
+            </div>
+          </div>
+
+          <div class="audio-setting-row" data-phase="break">
+            <div class="audio-setting-info">
+              <strong>休息结束</strong>
+              <span id="breakAudioName">默认提示音</span>
+            </div>
+            <div class="audio-setting-actions">
+              <button type="button" data-audio-action="choose" data-phase="break">选择文件</button>
+              <button type="button" data-audio-action="record" data-phase="break">录音</button>
+              <button type="button" data-audio-action="preview" data-phase="break">试听</button>
+              <button type="button" data-audio-action="clear" data-phase="break">清除</button>
+            </div>
+          </div>
+
+          <p class="audio-status" id="audioStatus"></p>
+          <button class="primary audio-dialog-close" id="audioDialogCloseButton" type="button">完成</button>
+        </div>
       </section>
 
       <section class="week-dialog" id="weekDialog" role="dialog" aria-modal="true" aria-labelledby="weekDialogTitle" hidden>

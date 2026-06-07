@@ -5,7 +5,10 @@ using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Media;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace PomodoroLite
@@ -24,7 +27,7 @@ namespace PomodoroLite
     internal sealed class PomodoroForm : Form
     {
         private const int NormalWidth = 360;
-        private const int NormalHeight = 540;
+        private const int NormalHeight = 590;
         private const int CompactWidth = 310;
         private const int CompactHeight = 58;
 
@@ -42,12 +45,14 @@ namespace PomodoroLite
         private readonly Button topButton = new RoundedButton();
         private readonly Button compactButton = new RoundedButton();
         private readonly Button weekButton = new RoundedButton();
+        private readonly Button audioButton = new RoundedButton();
         private readonly Panel normalPanel = new Panel();
         private readonly Panel compactPanel = new Panel();
         private readonly Label compactPhaseLabel = new Label();
         private readonly Label compactTimeLabel = new Label();
         private readonly Button expandButton = new RoundedButton();
         private readonly StatsStore statsStore = new StatsStore();
+        private readonly AudioStore audioStore = new AudioStore();
 
         private SessionStatus status = SessionStatus.Idle;
         private Phase phase = Phase.Work;
@@ -126,31 +131,36 @@ namespace PomodoroLite
             AddNumberField("工作分钟", workInput, 126, 222, 25);
             AddNumberField("休息分钟", breakInput, 236, 222, 5);
 
+            audioButton.Text = "提示音设置";
+            audioButton.SetBounds(16, 284, 320, 34);
+            StyleSoftButton(audioButton);
+            audioButton.Click += delegate { ShowAudioSettings(); };
+
             startButton.Text = "开始";
-            startButton.SetBounds(16, 304, 100, 38);
+            startButton.SetBounds(16, 340, 100, 38);
             StylePrimaryButton(startButton);
             startButton.Click += delegate { StartSession(); };
 
             pauseButton.Text = "暂停";
-            pauseButton.SetBounds(126, 304, 100, 38);
+            pauseButton.SetBounds(126, 340, 100, 38);
             StyleSoftButton(pauseButton);
             pauseButton.Enabled = false;
             pauseButton.Click += delegate { TogglePause(); };
 
             stopButton.Text = "停止";
-            stopButton.SetBounds(236, 304, 100, 38);
+            stopButton.SetBounds(236, 340, 100, 38);
             StyleSoftButton(stopButton);
             stopButton.Enabled = false;
             stopButton.Click += delegate { StopSession(); };
 
             Label todayTitle = MakeLabel("今日番茄工作", 12, Color.FromArgb(107, 114, 128));
-            todayTitle.SetBounds(16, 376, 180, 24);
+            todayTitle.SetBounds(16, 426, 180, 24);
 
             todayLabel.Font = new Font(Font.FontFamily, 20, FontStyle.Bold);
-            todayLabel.SetBounds(16, 402, 180, 36);
+            todayLabel.SetBounds(16, 452, 180, 36);
 
             weekButton.Text = "查看本周每天";
-            weekButton.SetBounds(196, 386, 140, 38);
+            weekButton.SetBounds(196, 436, 140, 38);
             StyleAccentButton(weekButton);
             weekButton.Click += delegate { ShowWeekDetails(); };
 
@@ -160,6 +170,7 @@ namespace PomodoroLite
             normalPanel.Controls.Add(compactButton);
             normalPanel.Controls.Add(timeLabel);
             normalPanel.Controls.Add(progressLabel);
+            normalPanel.Controls.Add(audioButton);
             normalPanel.Controls.Add(startButton);
             normalPanel.Controls.Add(pauseButton);
             normalPanel.Controls.Add(stopButton);
@@ -337,11 +348,14 @@ namespace PomodoroLite
         {
             if (phase == Phase.Work)
             {
+                PlayPhaseEndSound(Phase.Work);
                 statsStore.RecordCompletion(workMinutes);
                 RefreshStats();
                 BeginPhase(Phase.Break);
                 return;
             }
+
+            PlayPhaseEndSound(Phase.Break);
 
             if (currentPomodoro >= totalPomodoros)
             {
@@ -362,6 +376,47 @@ namespace PomodoroLite
             phaseTotalSeconds = (phase == Phase.Work ? workMinutes : breakMinutes) * 60;
             remainingSeconds = phaseTotalSeconds;
             UpdateUi();
+        }
+
+        private void PlayPhaseEndSound(Phase endedPhase)
+        {
+            if (audioStore.PlayCustom(endedPhase, delegate { PlayDefaultPhaseEndSound(endedPhase); }))
+            {
+                return;
+            }
+
+            PlayDefaultPhaseEndSound(endedPhase);
+        }
+
+        private void PlayDefaultPhaseEndSound(Phase endedPhase)
+        {
+            int[] frequencies = endedPhase == Phase.Work
+                ? new[] { 523, 659, 784 }
+                : new[] { 784, 659, 523 };
+
+            Task.Run(delegate
+            {
+                try
+                {
+                    foreach (int frequency in frequencies)
+                    {
+                        Console.Beep(frequency, 420);
+                        System.Threading.Thread.Sleep(180);
+                    }
+                }
+                catch
+                {
+                    // Some systems disable beeps; keep the timer flow uninterrupted.
+                }
+            });
+        }
+
+        private void ShowAudioSettings()
+        {
+            using (AudioSettingsForm form = new AudioSettingsForm(audioStore))
+            {
+                form.ShowDialog(this);
+            }
         }
 
         private void RefreshStats()
@@ -520,6 +575,473 @@ namespace PomodoroLite
             path.AddArc(arc, 90, 90);
             path.CloseFigure();
             return path;
+        }
+    }
+
+    internal sealed class AudioStore
+    {
+        private readonly string dataDir;
+        private readonly string audioDir;
+        private readonly string settingsPath;
+        private readonly AudioSettings settings;
+
+        public AudioStore()
+        {
+            dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PomodoroLite");
+            audioDir = Path.Combine(dataDir, "custom-audio");
+            settingsPath = Path.Combine(dataDir, "audio-settings.ini");
+            settings = AudioSettings.Load(settingsPath);
+        }
+
+        public AudioSettings Settings
+        {
+            get { return settings; }
+        }
+
+        public string ChooseAudioFile(IWin32Window owner, Phase phase)
+        {
+            using (OpenFileDialog dialog = new OpenFileDialog())
+            {
+                dialog.Title = phase == Phase.Work ? "选择工作结束音频" : "选择休息结束音频";
+                dialog.Filter = "音频文件|*.wav;*.mp3;*.m4a;*.ogg;*.webm|所有文件|*.*";
+                dialog.Multiselect = false;
+
+                if (dialog.ShowDialog(owner) != DialogResult.OK)
+                {
+                    return null;
+                }
+
+                Directory.CreateDirectory(audioDir);
+                string extension = Path.GetExtension(dialog.FileName);
+                if (string.IsNullOrEmpty(extension))
+                {
+                    extension = ".wav";
+                }
+
+                string targetPath = Path.Combine(audioDir, (phase == Phase.Work ? "work-end" : "break-end") + extension.ToLowerInvariant());
+                File.Copy(dialog.FileName, targetPath, true);
+                settings.SetPath(phase, targetPath);
+                settings.SetName(phase, Path.GetFileName(dialog.FileName));
+                Save();
+                return targetPath;
+            }
+        }
+
+        public string SaveRecordedAudio(Phase phase)
+        {
+            Directory.CreateDirectory(audioDir);
+            string targetPath = Path.Combine(audioDir, phase == Phase.Work ? "work-recording.wav" : "break-recording.wav");
+            settings.SetPath(phase, targetPath);
+            settings.SetName(phase, phase == Phase.Work ? "工作结束录音.wav" : "休息结束录音.wav");
+            Save();
+            return targetPath;
+        }
+
+        public void Clear(Phase phase)
+        {
+            settings.SetPath(phase, string.Empty);
+            settings.SetName(phase, string.Empty);
+            Save();
+        }
+
+        public bool PlayCustom(Phase phase, Action fallback)
+        {
+            string audioPath = settings.GetPath(phase);
+            if (string.IsNullOrWhiteSpace(audioPath) || !File.Exists(audioPath))
+            {
+                return false;
+            }
+
+            Task.Run(delegate
+            {
+                try
+                {
+                    if (!NativeAudio.PlayFile(audioPath))
+                    {
+                        fallback();
+                    }
+                }
+                catch
+                {
+                    fallback();
+                }
+            });
+            return true;
+        }
+
+        private void Save()
+        {
+            Directory.CreateDirectory(dataDir);
+            settings.Save(settingsPath);
+        }
+    }
+
+    internal sealed class AudioSettings
+    {
+        public string WorkEndAudioPath { get; set; }
+        public string WorkEndAudioName { get; set; }
+        public string BreakEndAudioPath { get; set; }
+        public string BreakEndAudioName { get; set; }
+
+        public static AudioSettings Load(string settingsPath)
+        {
+            AudioSettings settings = new AudioSettings();
+            if (!File.Exists(settingsPath))
+            {
+                return settings;
+            }
+
+            foreach (string line in File.ReadAllLines(settingsPath))
+            {
+                int separator = line.IndexOf('=');
+                if (separator <= 0)
+                {
+                    continue;
+                }
+
+                string key = line.Substring(0, separator);
+                string value = line.Substring(separator + 1);
+                if (key == "workEndAudioPath")
+                {
+                    settings.WorkEndAudioPath = value;
+                }
+                else if (key == "workEndAudioName")
+                {
+                    settings.WorkEndAudioName = value;
+                }
+                else if (key == "breakEndAudioPath")
+                {
+                    settings.BreakEndAudioPath = value;
+                }
+                else if (key == "breakEndAudioName")
+                {
+                    settings.BreakEndAudioName = value;
+                }
+            }
+
+            return settings;
+        }
+
+        public void Save(string settingsPath)
+        {
+            File.WriteAllLines(
+                settingsPath,
+                new[]
+                {
+                    "workEndAudioPath=" + (WorkEndAudioPath ?? string.Empty),
+                    "workEndAudioName=" + (WorkEndAudioName ?? string.Empty),
+                    "breakEndAudioPath=" + (BreakEndAudioPath ?? string.Empty),
+                    "breakEndAudioName=" + (BreakEndAudioName ?? string.Empty)
+                });
+        }
+
+        public string GetPath(Phase phase)
+        {
+            return phase == Phase.Work ? WorkEndAudioPath : BreakEndAudioPath;
+        }
+
+        public string GetName(Phase phase)
+        {
+            return phase == Phase.Work ? WorkEndAudioName : BreakEndAudioName;
+        }
+
+        public void SetPath(Phase phase, string value)
+        {
+            if (phase == Phase.Work)
+            {
+                WorkEndAudioPath = value;
+            }
+            else
+            {
+                BreakEndAudioPath = value;
+            }
+        }
+
+        public void SetName(Phase phase, string value)
+        {
+            if (phase == Phase.Work)
+            {
+                WorkEndAudioName = value;
+            }
+            else
+            {
+                BreakEndAudioName = value;
+            }
+        }
+    }
+
+    internal static class NativeAudio
+    {
+        public static bool PlayFile(string audioPath)
+        {
+            string alias = "pomodoro_audio_" + Guid.NewGuid().ToString("N");
+            try
+            {
+                int result = MciSendString("open \"" + audioPath + "\" alias " + alias, null, 0, IntPtr.Zero);
+                if (result != 0)
+                {
+                    result = MciSendString("open \"" + audioPath + "\" type mpegvideo alias " + alias, null, 0, IntPtr.Zero);
+                }
+
+                if (result != 0)
+                {
+                    using (SoundPlayer player = new SoundPlayer(audioPath))
+                    {
+                        player.PlaySync();
+                    }
+                    return true;
+                }
+
+                MciSendString("play " + alias + " wait", null, 0, IntPtr.Zero);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                MciSendString("close " + alias, null, 0, IntPtr.Zero);
+            }
+        }
+
+        public static void StartRecording()
+        {
+            StopRecording();
+            MciSendString("open new Type waveaudio Alias pomodoro_recording", null, 0, IntPtr.Zero);
+            MciSendString("record pomodoro_recording", null, 0, IntPtr.Zero);
+        }
+
+        public static void StopRecording(string outputPath)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
+            MciSendString("stop pomodoro_recording", null, 0, IntPtr.Zero);
+            MciSendString("save pomodoro_recording \"" + outputPath + "\"", null, 0, IntPtr.Zero);
+            MciSendString("close pomodoro_recording", null, 0, IntPtr.Zero);
+        }
+
+        public static void StopRecording()
+        {
+            MciSendString("stop pomodoro_recording", null, 0, IntPtr.Zero);
+            MciSendString("close pomodoro_recording", null, 0, IntPtr.Zero);
+        }
+
+        [DllImport("winmm.dll", EntryPoint = "mciSendString", CharSet = CharSet.Auto)]
+        private static extern int MciSendString(string command, StringBuilder returnValue, int returnLength, IntPtr winHandle);
+    }
+
+    internal sealed class AudioSettingsForm : Form
+    {
+        private readonly AudioStore audioStore;
+        private readonly Label workNameLabel = new Label();
+        private readonly Label breakNameLabel = new Label();
+        private readonly Label statusLabel = new Label();
+        private readonly Button workRecordButton = new RoundedButton();
+        private readonly Button breakRecordButton = new RoundedButton();
+        private Phase? recordingPhase;
+
+        public AudioSettingsForm(AudioStore audioStore)
+        {
+            this.audioStore = audioStore;
+            Text = "提示音设置";
+            StartPosition = FormStartPosition.CenterParent;
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            ShowInTaskbar = false;
+            ClientSize = new Size(390, 310);
+            BackColor = Color.FromArgb(255, 250, 242);
+            Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            BuildContent();
+            UpdateLabels();
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (recordingPhase.HasValue)
+            {
+                NativeAudio.StopRecording();
+            }
+
+            base.OnFormClosing(e);
+        }
+
+        private void BuildContent()
+        {
+            Label title = new Label
+            {
+                Text = "提示音设置",
+                AutoSize = false,
+                Font = new Font(Font.FontFamily, 16, FontStyle.Bold, GraphicsUnit.Point),
+                ForeColor = Color.FromArgb(17, 24, 39)
+            };
+            title.SetBounds(22, 18, 180, 30);
+
+            Label subtitle = new Label
+            {
+                Text = "未设置时使用默认三音提示",
+                AutoSize = false,
+                ForeColor = Color.FromArgb(107, 114, 128)
+            };
+            subtitle.SetBounds(24, 50, 220, 22);
+
+            AddAudioRow(Phase.Work, "工作结束", workNameLabel, workRecordButton, 24, 88);
+            AddAudioRow(Phase.Break, "休息结束", breakNameLabel, breakRecordButton, 24, 164);
+
+            statusLabel.AutoSize = false;
+            statusLabel.ForeColor = Color.FromArgb(107, 114, 128);
+            statusLabel.SetBounds(24, 240, 230, 24);
+
+            Button closeButton = new RoundedButton
+            {
+                Text = "完成",
+                DialogResult = DialogResult.OK
+            };
+            closeButton.SetBounds(278, 238, 88, 36);
+            StylePrimaryButton(closeButton);
+            AcceptButton = closeButton;
+
+            Controls.Add(title);
+            Controls.Add(subtitle);
+            Controls.Add(statusLabel);
+            Controls.Add(closeButton);
+        }
+
+        private void AddAudioRow(Phase phase, string title, Label nameLabel, Button recordButton, int x, int y)
+        {
+            Label titleLabel = new Label
+            {
+                Text = title,
+                AutoSize = false,
+                Font = new Font(Font.FontFamily, 9F, FontStyle.Bold, GraphicsUnit.Point),
+                ForeColor = Color.FromArgb(55, 65, 81)
+            };
+            titleLabel.SetBounds(x, y, 90, 22);
+
+            nameLabel.AutoSize = false;
+            nameLabel.ForeColor = Color.FromArgb(107, 114, 128);
+            nameLabel.SetBounds(x + 86, y, 256, 22);
+
+            Button chooseButton = new RoundedButton { Text = "选择文件" };
+            chooseButton.SetBounds(x, y + 30, 78, 32);
+            StyleSoftButton(chooseButton);
+            chooseButton.Click += delegate { ChooseFile(phase); };
+
+            recordButton.Text = "录音";
+            recordButton.SetBounds(x + 86, y + 30, 62, 32);
+            StyleSoftButton(recordButton);
+            recordButton.Click += delegate { ToggleRecording(phase); };
+
+            Button previewButton = new RoundedButton { Text = "试听" };
+            previewButton.SetBounds(x + 156, y + 30, 62, 32);
+            StyleSoftButton(previewButton);
+            previewButton.Click += delegate { Preview(phase); };
+
+            Button clearButton = new RoundedButton { Text = "清除" };
+            clearButton.SetBounds(x + 226, y + 30, 62, 32);
+            StyleSoftButton(clearButton);
+            clearButton.Click += delegate { Clear(phase); };
+
+            Controls.Add(titleLabel);
+            Controls.Add(nameLabel);
+            Controls.Add(chooseButton);
+            Controls.Add(recordButton);
+            Controls.Add(previewButton);
+            Controls.Add(clearButton);
+        }
+
+        private void ChooseFile(Phase phase)
+        {
+            string selected = audioStore.ChooseAudioFile(this, phase);
+            if (!string.IsNullOrEmpty(selected))
+            {
+                statusLabel.Text = "已保存音频。";
+                UpdateLabels();
+            }
+        }
+
+        private void ToggleRecording(Phase phase)
+        {
+            if (recordingPhase.HasValue)
+            {
+                Phase stoppedPhase = recordingPhase.Value;
+                string path = audioStore.SaveRecordedAudio(stoppedPhase);
+                NativeAudio.StopRecording(path);
+                recordingPhase = null;
+                workRecordButton.Text = "录音";
+                breakRecordButton.Text = "录音";
+                statusLabel.Text = "录音已保存。";
+                UpdateLabels();
+                return;
+            }
+
+            try
+            {
+                NativeAudio.StartRecording();
+                recordingPhase = phase;
+                (phase == Phase.Work ? workRecordButton : breakRecordButton).Text = "停止";
+                statusLabel.Text = "正在录音，再点一次停止。";
+            }
+            catch
+            {
+                statusLabel.Text = "无法访问麦克风。";
+            }
+        }
+
+        private void Preview(Phase phase)
+        {
+            if (!audioStore.PlayCustom(phase, delegate
+            {
+                if (!IsDisposed)
+                {
+                    BeginInvoke((MethodInvoker)delegate { statusLabel.Text = "自定义音频播放失败，已使用默认提示音。"; });
+                }
+            }))
+            {
+                statusLabel.Text = "当前为默认提示音。";
+            }
+        }
+
+        private void Clear(Phase phase)
+        {
+            audioStore.Clear(phase);
+            statusLabel.Text = "已恢复默认提示音。";
+            UpdateLabels();
+        }
+
+        private void UpdateLabels()
+        {
+            workNameLabel.Text = string.IsNullOrWhiteSpace(audioStore.Settings.WorkEndAudioName) ? "默认提示音" : audioStore.Settings.WorkEndAudioName;
+            breakNameLabel.Text = string.IsNullOrWhiteSpace(audioStore.Settings.BreakEndAudioName) ? "默认提示音" : audioStore.Settings.BreakEndAudioName;
+        }
+
+        private void StylePrimaryButton(Button button)
+        {
+            StyleButtonBase(button);
+            button.BackColor = Color.FromArgb(20, 118, 110);
+            button.ForeColor = Color.White;
+            button.FlatAppearance.BorderColor = Color.FromArgb(20, 118, 110);
+            button.FlatAppearance.MouseOverBackColor = Color.FromArgb(15, 92, 86);
+            button.FlatAppearance.MouseDownBackColor = Color.FromArgb(17, 74, 69);
+        }
+
+        private void StyleSoftButton(Button button)
+        {
+            StyleButtonBase(button);
+            button.BackColor = Color.FromArgb(248, 250, 252);
+            button.ForeColor = Color.FromArgb(55, 65, 81);
+            button.FlatAppearance.BorderColor = Color.FromArgb(226, 232, 240);
+            button.FlatAppearance.MouseOverBackColor = Color.FromArgb(241, 245, 249);
+            button.FlatAppearance.MouseDownBackColor = Color.FromArgb(226, 232, 240);
+        }
+
+        private void StyleButtonBase(Button button)
+        {
+            button.FlatStyle = FlatStyle.Flat;
+            button.FlatAppearance.BorderSize = 1;
+            button.Font = new Font(Font.FontFamily, 9F, FontStyle.Bold, GraphicsUnit.Point);
+            button.Cursor = Cursors.Hand;
+            button.UseVisualStyleBackColor = false;
         }
     }
 

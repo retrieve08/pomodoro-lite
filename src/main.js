@@ -1,6 +1,7 @@
-const { app, BrowserWindow, ipcMain, screen } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, screen } = require("electron");
 const fs = require("fs/promises");
 const path = require("path");
+const { pathToFileURL } = require("url");
 
 const NORMAL_SIZE = { width: 360, height: 540 };
 const COMPACT_SIZE = { width: 300, height: 64 };
@@ -12,6 +13,109 @@ let isCompact = false;
 
 function getStatsFilePath() {
   return path.join(app.getPath("userData"), "pomodoro-stats.json");
+}
+
+function getAudioSettingsFilePath() {
+  return path.join(app.getPath("userData"), "audio-settings.json");
+}
+
+function getAudioDir() {
+  return path.join(app.getPath("userData"), "custom-audio");
+}
+
+function isValidPhase(phase) {
+  return phase === "work" || phase === "break";
+}
+
+function getAudioKeys(phase) {
+  return phase === "work"
+    ? { pathKey: "workEndAudioPath", nameKey: "workEndAudioName", urlKey: "workEndAudioUrl" }
+    : { pathKey: "breakEndAudioPath", nameKey: "breakEndAudioName", urlKey: "breakEndAudioUrl" };
+}
+
+function normalizeAudioSettings(settings = {}) {
+  const normalized = {
+    workEndAudioPath: typeof settings.workEndAudioPath === "string" ? settings.workEndAudioPath : "",
+    workEndAudioName: typeof settings.workEndAudioName === "string" ? settings.workEndAudioName : "",
+    breakEndAudioPath: typeof settings.breakEndAudioPath === "string" ? settings.breakEndAudioPath : "",
+    breakEndAudioName: typeof settings.breakEndAudioName === "string" ? settings.breakEndAudioName : ""
+  };
+
+  ["work", "break"].forEach((phase) => {
+    const keys = getAudioKeys(phase);
+    normalized[keys.urlKey] = normalized[keys.pathKey] ? pathToFileURL(normalized[keys.pathKey]).toString() : "";
+  });
+
+  return normalized;
+}
+
+async function readAudioSettings() {
+  try {
+    const raw = await fs.readFile(getAudioSettingsFilePath(), "utf8");
+    return normalizeAudioSettings(JSON.parse(raw));
+  } catch {
+    return normalizeAudioSettings();
+  }
+}
+
+async function writeAudioSettings(settings) {
+  const normalized = normalizeAudioSettings(settings);
+  const filePath = getAudioSettingsFilePath();
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(
+    filePath,
+    JSON.stringify(
+      {
+        workEndAudioPath: normalized.workEndAudioPath,
+        workEndAudioName: normalized.workEndAudioName,
+        breakEndAudioPath: normalized.breakEndAudioPath,
+        breakEndAudioName: normalized.breakEndAudioName
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+  return normalized;
+}
+
+async function copyAudioFile(sourcePath, phase) {
+  const ext = path.extname(sourcePath) || ".wav";
+  const audioDir = getAudioDir();
+  const targetPath = path.join(audioDir, `${phase}-end${ext.toLowerCase()}`);
+  await fs.mkdir(audioDir, { recursive: true });
+  await fs.copyFile(sourcePath, targetPath);
+  return {
+    path: targetPath,
+    name: path.basename(sourcePath),
+    url: pathToFileURL(targetPath).toString()
+  };
+}
+
+async function saveRecordedAudio(phase, dataUrl) {
+  const match = /^data:audio\/([^;,]+)(?:;[^,]*)?;base64,(.+)$/i.exec(dataUrl || "");
+
+  if (!match) {
+    throw new Error("Invalid recorded audio data.");
+  }
+
+  const type = match[1].toLowerCase();
+  const extension = type.includes("webm")
+    ? ".webm"
+    : type.includes("ogg")
+      ? ".ogg"
+      : type.includes("mpeg") || type.includes("mp3")
+        ? ".mp3"
+        : ".wav";
+  const audioDir = getAudioDir();
+  const targetPath = path.join(audioDir, `${phase}-recording${extension}`);
+  await fs.mkdir(audioDir, { recursive: true });
+  await fs.writeFile(targetPath, Buffer.from(match[2], "base64"));
+  return {
+    path: targetPath,
+    name: `${phase === "work" ? "工作结束" : "休息结束"}录音${extension}`,
+    url: pathToFileURL(targetPath).toString()
+  };
 }
 
 async function ensureStatsFile() {
@@ -182,6 +286,51 @@ ipcMain.handle("stats:record-completion", async (_event, payload) => {
   await writeStats(stats);
 
   return summarizeThisWeek(stats.completions);
+});
+
+ipcMain.handle("audio:get-settings", async () => readAudioSettings());
+
+ipcMain.handle("audio:save-settings", async (_event, settings) => writeAudioSettings(settings));
+
+ipcMain.handle("audio:choose-file", async (_event, phase) => {
+  if (!isValidPhase(phase)) {
+    throw new Error("Invalid audio phase.");
+  }
+
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: phase === "work" ? "选择工作结束音频" : "选择休息结束音频",
+    properties: ["openFile"],
+    filters: [
+      { name: "Audio", extensions: ["wav", "mp3", "m4a", "ogg", "webm"] },
+      { name: "All Files", extensions: ["*"] }
+    ]
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return null;
+  }
+
+  const file = await copyAudioFile(result.filePaths[0], phase);
+  const settings = await readAudioSettings();
+  const keys = getAudioKeys(phase);
+  settings[keys.pathKey] = file.path;
+  settings[keys.nameKey] = file.name;
+  return writeAudioSettings(settings);
+});
+
+ipcMain.handle("audio:save-recording", async (_event, payload) => {
+  const phase = payload?.phase;
+
+  if (!isValidPhase(phase)) {
+    throw new Error("Invalid audio phase.");
+  }
+
+  const file = await saveRecordedAudio(phase, payload?.dataUrl);
+  const settings = await readAudioSettings();
+  const keys = getAudioKeys(phase);
+  settings[keys.pathKey] = file.path;
+  settings[keys.nameKey] = file.name;
+  return writeAudioSettings(settings);
 });
 
 ipcMain.handle("window:toggle-always-on-top", () => {

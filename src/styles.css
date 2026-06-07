@@ -171,6 +171,14 @@ h1 {
   opacity: 0.72;
 }
 
+.audio-settings-button {
+  width: 100%;
+  min-height: 36px;
+  border-color: var(--line);
+  background: #ffffff;
+  color: #374151;
+}
+
 label {
   display: flex;
   min-width: 0;
@@ -275,6 +283,122 @@ input:focus {
   place-items: center;
   padding: 16px;
   -webkit-app-region: no-drag;
+}
+
+.audio-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 12;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  -webkit-app-region: no-drag;
+}
+
+.audio-dialog[hidden] {
+  display: none;
+}
+
+.audio-dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.32);
+}
+
+.audio-dialog-card {
+  position: relative;
+  display: flex;
+  width: min(328px, calc(100vw - 24px));
+  max-height: calc(100vh - 28px);
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(226, 232, 240, 0.98);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.24);
+  overflow: auto;
+}
+
+.audio-dialog-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.audio-dialog-header h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.audio-dialog-header p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.audio-dialog-x {
+  width: 32px;
+  min-width: 32px;
+  padding: 0;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.audio-setting-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.audio-setting-info {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.audio-setting-info strong {
+  font-size: 14px;
+}
+
+.audio-setting-info span,
+.audio-status {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.audio-setting-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.audio-setting-actions button {
+  min-height: 32px;
+  font-size: 12px;
+}
+
+.audio-setting-actions button.is-recording {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.audio-status {
+  min-height: 18px;
+  margin: 0;
+}
+
+.audio-dialog-close {
+  align-self: flex-end;
+  min-width: 88px;
+  padding: 0 18px;
 }
 
 .week-dialog[hidden] {
