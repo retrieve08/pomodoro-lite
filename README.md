@@ -28,6 +28,10 @@
 
 ![主界面](docs/images/main-window.png)
 
+### 折叠界面
+
+![折叠界面](docs/images/folded-window.png)
+
 ### 每周总结
 
 ![每周总结](docs/images/week-summary.png)
